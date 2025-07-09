@@ -52,54 +52,91 @@ export function usePokemonData({
       if (searchTerm) {
         // Search for specific Pokemon
         try {
-          // First try exact match
-          try {
-            const pokemon = await fetchPokemonByName(searchTerm);
-            const pokemonWithId = { ...pokemon, id: pokemon.id };
-            setData([pokemonWithId]);
-            setTotalCount(1);
-            setHasNext(false);
-            setHasPrevious(false);
-          } catch (exactError) {
-            // If exact match fails, try partial search
-            if (exactError instanceof Error && exactError.message.includes('not found')) {
-              // Fetch a larger list to search through
-              const listResponse = await fetchPokemonList(1000, 0);
-              
-              // Filter Pokemon that start with the search term
-              const prefixLength = searchTerm.length >= 4 ? 3 : searchTerm.length;
-              const matchingPokemon = listResponse.results.filter(pokemon =>
-                  pokemon.name.toLowerCase().startsWith(searchTerm.substring(0, prefixLength).toLowerCase())
+          // Only try exact match if search term is at least 3 characters
+          if (searchTerm.length >= 3) {
+            try {
+              const pokemon = await fetchPokemonByName(searchTerm);
+              const pokemonWithId = { ...pokemon, id: pokemon.id };
+              setData([pokemonWithId]);
+              setTotalCount(1);
+              setHasNext(false);
+              setHasPrevious(false);
+              return; // Exit early if we found an exact match
+            } catch (exactError) {
+              // If exact match fails, try partial search
+              if (exactError instanceof Error && exactError.message.includes('not found')) {
+                // Fetch a larger list to search through
+                const listResponse = await fetchPokemonList(1000, 0);
+
+                // Filter Pokemon that start with the search term
+                const prefixLength = searchTerm.length >= 4 ? 3 : searchTerm.length;
+                const matchingPokemon = listResponse.results.filter(pokemon =>
+                    pokemon.name.toLowerCase().startsWith(searchTerm.substring(0, prefixLength).toLowerCase())
+                );
+
+
+
+                if (matchingPokemon.length > 0) {
+                  // Fetch details for matching Pokemon (limit to first 20 for performance)
+                  const pokemonToFetch = matchingPokemon.slice(0, 20);
+                  const detailedPokemon = await Promise.all(
+                    pokemonToFetch.map(async (pokemon) => {
+                      const details = await fetchPokemonDetails(pokemon.url);
+                      return {
+                        ...details,
+                        id: getPokemonIdFromUrl(pokemon.url)
+                      };
+                    })
+                  );
+
+                  setData(detailedPokemon);
+                  setTotalCount(matchingPokemon.length);
+                  setHasNext(matchingPokemon.length > 20);
+                  setHasPrevious(false);
+                } else {
+                  // No matches found
+                  setData([]);
+                  setTotalCount(0);
+                  setHasNext(false);
+                  setHasPrevious(false);
+                }
+              } else {
+                throw exactError;
+              }
+            }
+          } else {
+            // For short search terms, skip exact match and go straight to partial search
+            const listResponse = await fetchPokemonList(1000, 0);
+
+            // Filter Pokemon that start with the search term
+            const prefixLength = searchTerm.length >= 4 ? 3 : searchTerm.length;
+            const matchingPokemon = listResponse.results.filter(pokemon =>
+                pokemon.name.toLowerCase().startsWith(searchTerm.substring(0, prefixLength).toLowerCase())
+            );
+
+            if (matchingPokemon.length > 0) {
+              // Fetch details for matching Pokemon (limit to first 20 for performance)
+              const pokemonToFetch = matchingPokemon.slice(0, 20);
+              const detailedPokemon = await Promise.all(
+                pokemonToFetch.map(async (pokemon) => {
+                  const details = await fetchPokemonDetails(pokemon.url);
+                  return {
+                    ...details,
+                    id: getPokemonIdFromUrl(pokemon.url)
+                  };
+                })
               );
 
-
-
-              if (matchingPokemon.length > 0) {
-                // Fetch details for matching Pokemon (limit to first 20 for performance)
-                const pokemonToFetch = matchingPokemon.slice(0, 20);
-                const detailedPokemon = await Promise.all(
-                  pokemonToFetch.map(async (pokemon) => {
-                    const details = await fetchPokemonDetails(pokemon.url);
-                    return {
-                      ...details,
-                      id: getPokemonIdFromUrl(pokemon.url)
-                    };
-                  })
-                );
-                
-                setData(detailedPokemon);
-                setTotalCount(matchingPokemon.length);
-                setHasNext(matchingPokemon.length > 20);
-                setHasPrevious(false);
-              } else {
-                // No matches found
-                setData([]);
-                setTotalCount(0);
-                setHasNext(false);
-                setHasPrevious(false);
-              }
+              setData(detailedPokemon);
+              setTotalCount(matchingPokemon.length);
+              setHasNext(matchingPokemon.length > 20);
+              setHasPrevious(false);
             } else {
-              throw exactError;
+              // No matches found
+              setData([]);
+              setTotalCount(0);
+              setHasNext(false);
+              setHasPrevious(false);
             }
           }
         } catch (searchError) {
@@ -108,7 +145,7 @@ export function usePokemonData({
       } else {
         // Fetch paginated list
         const listResponse = await fetchPokemonList(limit, offset);
-        
+
         // Fetch details for each Pokemon
         const detailedPokemon = await Promise.all(
           listResponse.results.map(async (pokemon) => {
@@ -181,7 +218,7 @@ export function useEvolutionTriggers(
       setError(null);
 
       const response = await fetchEvolutionTriggers(limit, offset);
-      
+
       setData(response.results);
       setTotalCount(response.count);
       setHasNext(response.next !== null);

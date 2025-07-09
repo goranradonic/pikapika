@@ -21,6 +21,7 @@ const getPokemonIdFromUrl = pokemonApi.getPokemonIdFromUrl;
 describe('usePokemonData', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('should fetch pokemon list with default parameters', async () => {
