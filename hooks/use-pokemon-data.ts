@@ -67,10 +67,13 @@ export function usePokemonData({
               const listResponse = await fetchPokemonList(1000, 0);
               
               // Filter Pokemon that start with the search term
-              const matchingPokemon = listResponse.results.filter(pokemon => 
-                pokemon.name.toLowerCase().startsWith(searchTerm.toLowerCase())
+              const prefixLength = searchTerm.length >= 4 ? 3 : searchTerm.length;
+              const matchingPokemon = listResponse.results.filter(pokemon =>
+                  pokemon.name.toLowerCase().startsWith(searchTerm.substring(0, prefixLength).toLowerCase())
               );
-              
+
+
+
               if (matchingPokemon.length > 0) {
                 // Fetch details for matching Pokemon (limit to first 20 for performance)
                 const pokemonToFetch = matchingPokemon.slice(0, 20);

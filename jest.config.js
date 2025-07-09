@@ -1,7 +1,8 @@
 module.exports = {
-  testEnvironment: 'jsdom',
+  preset: 'ts-jest',
+  testEnvironment: 'jest-environment-jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
@@ -11,4 +12,7 @@ module.exports = {
     'lib/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
   ],
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
 };
